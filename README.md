@@ -2,7 +2,7 @@
 
 > 在线 Markdown 编辑器，即写即看，一键导出精美 PDF 或长图，完全在浏览器本地运行，无需注册，无需上传。
 
-**[🚀 立即使用](https://zili.github.io/markdown-2-pdf-image/)**
+**[🚀 立即使用](https://zziilii.github.io/markdown-2-pdf-image/)**
 
 ---
 
