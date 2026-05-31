@@ -36,6 +36,10 @@ function onFileChange(e) {
   reader.readAsText(file)
   e.target.value = ''
 }
+
+function formatPageLabel(fmt) {
+  return `${fmt.label} · ${fmt.contentPx}px`
+}
 </script>
 
 <template>
@@ -54,174 +58,186 @@ function onFileChange(e) {
     </div>
 
     <div class="toolbar-right">
-      <!-- 文件名输入 -->
-      <input
-        class="toolbar-input filename-input"
-        type="text"
-        placeholder="文件名"
-        :value="filename"
-        @input="emit('update:filename', $event.target.value)"
-        title="导出文件名"
-      />
+      <section class="toolbar-group toolbar-group-file" aria-label="文档">
+        <span class="group-label">文档</span>
+        <div class="group-controls">
+          <input
+            class="toolbar-input filename-input"
+            type="text"
+            placeholder="文件名"
+            :value="filename"
+            @input="emit('update:filename', $event.target.value)"
+            title="导出文件名"
+          />
 
-      <!-- 不分页开关（矢量/位图均支持） -->
-      <button
-        class="btn btn-toggle"
-        :class="{ active: pdfSinglePage }"
-        :title="pdfSinglePage ? '当前：不分页（点击切换为分页）' : '当前：分页（点击切换为不分页）'"
-        @click="emit('update:pdfSinglePage', !pdfSinglePage)"
-      >
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="4" y="2" width="16" height="20" rx="2"/>
-          <line x1="4" y1="12" x2="20" y2="12" stroke-dasharray="3 2"/>
-        </svg>
-        {{ pdfSinglePage ? '不分页' : '分页' }}
-      </button>
+          <button class="btn btn-secondary" @click="onImportClick" title="导入 .md 文件">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            导入
+          </button>
+          <input
+            ref="fileInputRef"
+            type="file"
+            accept=".md,.markdown,.txt"
+            style="display: none"
+            @change="onFileChange"
+          />
+        </div>
+      </section>
 
-      <!-- PDF 格式选择 -->
-      <div class="select-wrapper" title="PDF 页面格式">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="3" width="18" height="18" rx="2"/>
-          <line x1="3" y1="9" x2="21" y2="9"/>
-        </svg>
-        <select
-          class="toolbar-select"
-          :value="pdfFormat"
-          @change="emit('update:pdfFormat', $event.target.value)"
-        >
-          <option v-for="(fmt, key) in PDF_FORMATS" :key="key" :value="key">
-            {{ fmt.label }}
-          </option>
-        </select>
-      </div>
+      <section class="toolbar-group" aria-label="页面设置">
+        <span class="group-label">页面</span>
+        <div class="group-controls">
+          <button
+            class="btn btn-toggle"
+            :class="{ active: pdfSinglePage }"
+            :title="pdfSinglePage ? '当前：不分页（点击切换为分页）' : '当前：分页（点击切换为不分页）'"
+            @click="emit('update:pdfSinglePage', !pdfSinglePage)"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="4" y="2" width="16" height="20" rx="2"/>
+              <line x1="4" y1="12" x2="20" y2="12" stroke-dasharray="3 2"/>
+            </svg>
+            {{ pdfSinglePage ? '不分页' : '分页' }}
+          </button>
 
-      <!-- PDF 模式切换：矢量 / 位图 -->
-      <div class="mode-toggle" title="PDF 模式">
-        <button
-          class="mode-btn"
-          :class="{ active: pdfMode === 'vector' }"
-          @click="emit('update:pdfMode', 'vector')"
-        >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-            <polyline points="4 7 4 4 20 4 20 7"/>
-            <line x1="9" y1="20" x2="15" y2="20"/>
-            <line x1="12" y1="4" x2="12" y2="20"/>
-          </svg>
-          矢量
-        </button>
-        <button
-          class="mode-btn"
-          :class="{ active: pdfMode === 'bitmap' }"
-          @click="emit('update:pdfMode', 'bitmap')"
-        >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2"/>
-            <circle cx="8.5" cy="8.5" r="1.5"/>
-            <polyline points="21 15 16 10 5 21"/>
-          </svg>
-          位图
-        </button>
-      </div>
+          <div class="select-wrapper" title="PDF 页面格式">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <line x1="3" y1="9" x2="21" y2="9"/>
+            </svg>
+            <select
+              class="toolbar-select"
+              :value="pdfFormat"
+              @change="emit('update:pdfFormat', $event.target.value)"
+            >
+              <option v-for="(fmt, key) in PDF_FORMATS" :key="key" :value="key">
+                {{ formatPageLabel(fmt) }}
+              </option>
+            </select>
+          </div>
 
-      <!-- PDF 主题选择 -->
-      <div class="select-wrapper" title="PDF 主题">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="3"/>
-          <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
-        </svg>
-        <select
-          class="toolbar-select"
-          :value="pdfTheme"
-          @change="emit('update:pdfTheme', $event.target.value)"
-        >
-          <option v-for="(thm, key) in PDF_THEMES" :key="key" :value="key">
-            {{ thm.label }}
-          </option>
-        </select>
-      </div>
+          <div class="select-wrapper" title="导出内容主题">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+            </svg>
+            <select
+              class="toolbar-select"
+              :value="pdfTheme"
+              @change="emit('update:pdfTheme', $event.target.value)"
+            >
+              <option v-for="(thm, key) in PDF_THEMES" :key="key" :value="key">
+                {{ thm.label }}
+              </option>
+            </select>
+          </div>
+        </div>
+      </section>
 
-      <!-- 分隔线 -->
-      <div class="toolbar-sep" />
+      <section class="toolbar-group toolbar-group-export" aria-label="PDF 导出">
+        <span class="group-label">PDF</span>
+        <div class="group-controls">
+          <div class="mode-toggle" title="PDF 模式">
+            <button
+              class="mode-btn"
+              :class="{ active: pdfMode === 'vector' }"
+              @click="emit('update:pdfMode', 'vector')"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                <polyline points="4 7 4 4 20 4 20 7"/>
+                <line x1="9" y1="20" x2="15" y2="20"/>
+                <line x1="12" y1="4" x2="12" y2="20"/>
+              </svg>
+              矢量
+            </button>
+            <button
+              class="mode-btn"
+              :class="{ active: pdfMode === 'bitmap' }"
+              @click="emit('update:pdfMode', 'bitmap')"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21 15 16 10 5 21"/>
+              </svg>
+              位图
+            </button>
+          </div>
 
-      <!-- 导入 .md 文件 -->
-      <button class="btn btn-secondary" @click="onImportClick" title="导入 .md 文件">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-          <polyline points="17 8 12 3 7 8"/>
-          <line x1="12" y1="3" x2="12" y2="15"/>
-        </svg>
-        导入
-      </button>
-      <input
-        ref="fileInputRef"
-        type="file"
-        accept=".md,.markdown,.txt"
-        style="display: none"
-        @change="onFileChange"
-      />
+          <button
+            class="btn btn-primary"
+            :disabled="exporting"
+            @click="emit('export-pdf')"
+            :title="pdfMode === 'vector' ? '导出为 PDF（文字可选中）' : '导出为位图 PDF（排版更稳定）'"
+          >
+            <svg v-if="!exporting" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            <svg v-else class="spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+            </svg>
+            {{ exporting ? '打开中...' : '导出 PDF' }}
+          </button>
+        </div>
+      </section>
 
-      <!-- 长图像素倍率 -->
-      <div class="mode-toggle" title="长图像素倍率">
-        <button v-for="s in [1, 2, 3]" :key="s"
-          class="mode-btn"
-          :class="{ active: imageScale === s }"
-          @click="emit('update:imageScale', s)"
-        >{{ s }}x</button>
-      </div>
+      <section class="toolbar-group toolbar-group-export" aria-label="长图导出">
+        <span class="group-label">长图</span>
+        <div class="group-controls">
+          <div class="mode-toggle scale-toggle" title="长图像素倍率">
+            <button v-for="s in [1, 2, 3]" :key="s"
+              class="mode-btn"
+              :class="{ active: imageScale === s }"
+              @click="emit('update:imageScale', s)"
+            >{{ s }}x</button>
+          </div>
 
-      <!-- 导出长图 PNG -->
-      <button
-        class="btn btn-secondary"
-        :disabled="exportingImage"
-        @click="emit('export-image')"
-        title="导出为长图 PNG"
-      >
-        <svg v-if="!exportingImage" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="3" width="18" height="18" rx="2"/>
-          <circle cx="8.5" cy="8.5" r="1.5"/>
-          <polyline points="21 15 16 10 5 21"/>
-        </svg>
-        <svg v-else class="spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
-        </svg>
-        {{ exportingImage ? '生成中...' : '导出长图' }}
-      </button>
+          <button
+            class="btn btn-secondary"
+            :disabled="exportingImage"
+            @click="emit('export-image')"
+            title="导出为长图 PNG"
+          >
+            <svg v-if="!exportingImage" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21 15 16 10 5 21"/>
+            </svg>
+            <svg v-else class="spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+            </svg>
+            {{ exportingImage ? '生成中...' : '导出长图' }}
+          </button>
+        </div>
+      </section>
 
-      <!-- 导出 PDF -->
-      <button
-        class="btn btn-primary"
-        :disabled="exporting"
-        @click="emit('export-pdf')"
-        title="导出为 PDF（文字可选中）"
-      >
-        <svg v-if="!exporting" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-          <polyline points="7 10 12 15 17 10"/>
-          <line x1="12" y1="15" x2="12" y2="3"/>
-        </svg>
-        <svg v-else class="spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
-        </svg>
-        {{ exporting ? '打开中...' : '导出 PDF' }}
-      </button>
-
-      <!-- 明暗主题切换 -->
-      <button class="btn btn-icon" @click="emit('toggle-theme')" :title="isDark ? '切换为亮色主题' : '切换为暗色主题'">
-        <svg v-if="isDark" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="5"/>
-          <line x1="12" y1="1" x2="12" y2="3"/>
-          <line x1="12" y1="21" x2="12" y2="23"/>
-          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
-          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-          <line x1="1" y1="12" x2="3" y2="12"/>
-          <line x1="21" y1="12" x2="23" y2="12"/>
-          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
-          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-        </svg>
-        <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-        </svg>
-      </button>
+      <section class="toolbar-group toolbar-group-icon" aria-label="界面">
+        <span class="group-label">界面</span>
+        <div class="group-controls">
+          <button class="btn btn-icon" @click="emit('toggle-theme')" :title="isDark ? '切换为亮色界面' : '切换为暗色界面'">
+            <svg v-if="isDark" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="5"/>
+              <line x1="12" y1="1" x2="12" y2="3"/>
+              <line x1="12" y1="21" x2="12" y2="23"/>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+              <line x1="1" y1="12" x2="3" y2="12"/>
+              <line x1="21" y1="12" x2="23" y2="12"/>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+            </svg>
+            <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+          </button>
+        </div>
+      </section>
     </div>
   </header>
 </template>
@@ -231,12 +247,12 @@ function onFileChange(e) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 14px;
-  height: 50px;
+  padding: 8px 14px;
+  min-height: 68px;
   background: var(--toolbar-bg);
   border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
-  gap: 8px;
+  gap: 14px;
   z-index: 100;
 }
 
@@ -254,9 +270,57 @@ function onFileChange(e) {
 .toolbar-right {
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
 }
 
+.toolbar-group {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  padding-left: 10px;
+  border-left: 1px solid var(--border-color);
+}
+
+.toolbar-group:first-child {
+  padding-left: 0;
+  border-left: none;
+}
+
+.toolbar-group-file {
+  flex: 0 1 240px;
+}
+
+.toolbar-group-export {
+  flex-shrink: 0;
+}
+
+.toolbar-group-icon {
+  flex-shrink: 0;
+}
+
+.group-label {
+  display: block;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.group-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* Legacy separator, kept for safety if reused later. */
 .toolbar-sep {
   width: 1px;
   height: 20px;
@@ -282,7 +346,8 @@ function onFileChange(e) {
 }
 
 .filename-input {
-  width: 130px;
+  width: clamp(118px, 12vw, 170px);
+  min-width: 108px;
 }
 
 /* PDF 模式切换 */
@@ -308,6 +373,11 @@ function onFileChange(e) {
   cursor: pointer;
   transition: all 0.12s;
   white-space: nowrap;
+}
+
+.scale-toggle .mode-btn {
+  min-width: 42px;
+  justify-content: center;
 }
 
 .mode-btn + .mode-btn {
@@ -355,6 +425,10 @@ function onFileChange(e) {
   appearance: none;
   -webkit-appearance: none;
   padding-right: 2px;
+}
+
+.select-wrapper[title="PDF 页面格式"] .toolbar-select {
+  min-width: 128px;
 }
 
 /* Buttons */
@@ -433,5 +507,47 @@ function onFileChange(e) {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+@media (max-width: 1180px) {
+  .toolbar {
+    align-items: flex-start;
+  }
+
+  .toolbar-logo {
+    min-height: 45px;
+  }
+
+  .toolbar-right {
+    justify-content: flex-start;
+  }
+
+  .toolbar-group-file {
+    flex-basis: auto;
+  }
+}
+
+@media (max-width: 760px) {
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .toolbar-right {
+    width: 100%;
+  }
+
+  .toolbar-group {
+    padding-left: 0;
+    padding-right: 8px;
+    border-left: none;
+    border-right: 1px solid var(--border-color);
+  }
+
+  .toolbar-group:last-child {
+    padding-right: 0;
+    border-right: none;
+  }
 }
 </style>

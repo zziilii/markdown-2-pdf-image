@@ -97,14 +97,11 @@ async function screenshotEl(sourceEl, fmt, thm, scale) {
 
 function buildPrintCSS(fmt, thm, singlePage) {
   const c = thm.vars
-  // singlePage: 高度 auto → 浏览器输出为一张超长页
+  // singlePage is best-effort in the browser print pipeline. Real automatic
+  // pagination should use a fixed page height and let Chromium split pages.
   const pageSize = singlePage
     ? `${fmt.widthMm}mm auto`
     : `${fmt.widthMm}mm ${fmt.heightMm}mm`
-
-  // 明确限制内容区宽度，避免打印时出现横向溢出
-  const marginHMm = parseFloat(fmt.marginH)
-  const contentWidthMm = fmt.widthMm - marginHMm * 2
 
   return `
 @page {
@@ -115,15 +112,12 @@ function buildPrintCSS(fmt, thm, singlePage) {
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html {
-  width: ${contentWidthMm}mm;
-  max-width: ${contentWidthMm}mm;
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
+  background: ${c.bg};
 }
 
 body {
-  width: ${contentWidthMm}mm;
-  max-width: ${contentWidthMm}mm;
   overflow-x: hidden;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
                'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
@@ -134,19 +128,29 @@ body {
   word-wrap: break-word;
 }
 
-${singlePage ? '* { page-break-inside: avoid !important; }' : ''}
+.print-root {
+  width: 100%;
+  max-width: 100%;
+  overflow: visible;
+}
 
-h1,h2,h3,h4,h5,h6 { margin-top:1.4em; margin-bottom:0.5em; font-weight:700; line-height:1.3; color:${c.text}; page-break-after:avoid; }
+h1,h2,h3,h4,h5,h6 {
+  margin-top:1.4em; margin-bottom:0.5em; font-weight:700; line-height:1.3; color:${c.text};
+  break-after: avoid-page;
+  break-inside: avoid-page;
+  page-break-after: avoid;
+  page-break-inside: avoid;
+}
 h1 { font-size:2em;    border-bottom:2px solid ${c.border}; padding-bottom:0.3em; }
 h2 { font-size:1.5em;  border-bottom:1px solid ${c.border}; padding-bottom:0.25em; }
 h3 { font-size:1.25em; }
 h4 { font-size:1.1em; }
 h5,h6 { font-size:1em; color:${c.textSub}; }
 
-p { margin-bottom:0.9em; }
+p { margin-bottom:0.9em; orphans:3; widows:3; }
 a { color:${c.link}; text-decoration:none; }
 ul,ol { padding-left:1.8em; margin-bottom:0.9em; }
-li { margin-bottom:0.2em; }
+li { margin-bottom:0.2em; orphans:3; widows:3; }
 
 blockquote {
   margin:0.9em 0; padding:0.6em 1em;
@@ -154,6 +158,8 @@ blockquote {
   background:${c.quoteBg};
   border-radius:0 4px 4px 0;
   color:${c.textSub};
+  break-inside: avoid-page;
+  page-break-inside: avoid;
 }
 blockquote p { margin:0; }
 blockquote p+p { margin-top:0.4em; }
@@ -167,28 +173,36 @@ code {
 
 pre {
   margin:0.9em 0; border-radius:6px; overflow:hidden;
-  background:#282c34; page-break-inside:avoid;
+  background:#282c34;
+  break-inside: avoid-page;
+  page-break-inside: avoid;
 }
 pre code {
   display:block; padding:1em 1.2em; background:transparent; color:#abb2bf;
   font-family:'JetBrains Mono','Fira Code',Consolas,monospace;
-  font-size:0.88em; line-height:1.6; overflow-x:auto;
+  font-size:0.88em; line-height:1.6; overflow-wrap:anywhere; white-space:pre-wrap;
 }
 
 hr { border:none; border-top:1px solid ${c.hr}; margin:1.5em 0; }
 
 table {
   width:100%; border-collapse:collapse; margin:0.9em 0;
-  font-size:0.93em; border:1px solid ${c.border}; page-break-inside:avoid;
+  font-size:0.93em; border:1px solid ${c.border};
+  break-inside: avoid-page;
+  page-break-inside: avoid;
 }
 thead { background:${c.tableHead}; }
 th,td { padding:8px 14px; border:1px solid ${c.border}; text-align:left; }
 th { font-weight:600; }
 tbody tr:nth-child(even) { background:${c.tableStripe}; }
 
-img { max-width:100%; border-radius:4px; }
+img { max-width:100%; border-radius:4px; break-inside:avoid-page; page-break-inside:avoid; }
 
-.mermaid-wrapper { text-align:center; margin:1em 0; page-break-inside:avoid; }
+.mermaid-wrapper {
+  text-align:center; margin:1em 0;
+  break-inside: avoid-page;
+  page-break-inside: avoid;
+}
 pre.mermaid { background:transparent !important; padding:0; }
 pre.mermaid svg,.mermaid-wrapper svg { max-width:100%; height:auto; }
 
@@ -233,7 +247,7 @@ export function exportToPdf(sourceEl, filename = 'document', formatKey = 'a4', t
 <html lang="zh-CN"><head><meta charset="UTF-8">
 <title>${filename}</title>
 <style>${css}</style>
-</head><body>${bodyHTML}</body></html>`)
+</head><body><main class="print-root">${bodyHTML}</main></body></html>`)
   win.document.close()
 
   win.addEventListener('load', () => {

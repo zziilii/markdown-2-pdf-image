@@ -44,7 +44,17 @@ function toggleTheme() {
 const markdownText = ref(DEFAULT_CONTENT)
 
 // ── 文件名（自动从标题提取） ──────────────────────────
-const filename = ref('document')
+const FALLBACK_FILENAME = 'Markdown 转 PDF'
+
+function cleanFilename(name) {
+  return (name || FALLBACK_FILENAME)
+    .replace(/[\\/:*?"<>|]/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 80) || FALLBACK_FILENAME
+}
+
+const filename = ref(cleanFilename(extractHeading(DEFAULT_CONTENT)))
 const filenameManuallySet = ref(false)
 
 function extractHeading(md) {
@@ -60,7 +70,7 @@ function extractHeading(md) {
 watch(markdownText, (md) => {
   if (filenameManuallySet.value) return
   const heading = extractHeading(md)
-  if (heading) filename.value = heading
+  if (heading) filename.value = cleanFilename(heading)
 })
 
 function onFilenameInput(val) {
@@ -103,7 +113,7 @@ async function onExportPdf() {
     await waitReady()
     const el = previewComp.value?.previewRef
     if (!el) return
-    const name = filename.value || 'document'
+    const name = cleanFilename(filename.value)
     if (pdfMode.value === 'bitmap') {
       await exportToPdfBitmap(el, name, pdfFormat.value, pdfTheme.value, pdfSinglePage.value)
     } else {
@@ -124,7 +134,7 @@ async function onExportImage() {
     await waitReady()
     const el = previewComp.value?.previewRef
     if (!el) return
-    await exportToImage(el, filename.value || 'document', pdfFormat.value, pdfTheme.value, imageScale.value)
+    await exportToImage(el, cleanFilename(filename.value), pdfFormat.value, pdfTheme.value, imageScale.value)
   } catch (e) {
     console.error('[exportImage]', e)
     alert('长图导出失败，请查看控制台。')
