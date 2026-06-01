@@ -8,6 +8,9 @@
     "build": "vite build",
     "preview": "vite preview"
   },
+  "engines": {
+    "node": ">=22"
+  },
   "dependencies": {
     "highlight.js": "^11.11.1",
     "html2canvas": "^1.4.1",
